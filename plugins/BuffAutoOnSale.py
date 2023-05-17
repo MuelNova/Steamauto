@@ -62,16 +62,13 @@ class BuffAutoOnSale:
 
     def get_buff_inventory(self, page_num=1, page_size=60, sort_by='time.desc', state='all', force=0, force_wear=0,
                            game='csgo', app_id=730):
-        url = 'https://buff.163.com/api/market/steam_inventory?page_num=' + str(page_num) + '&page_size=' + \
-              str(page_size) + '&sort_by=' + sort_by + '&state=' + state + '&force=' + str(force) + \
-              '&force_wear=' + str(force_wear) + '&game=' + str(game) + '&appid=' + str(app_id)
+        url = f'https://buff.163.com/api/market/steam_inventory?page_num={str(page_num)}&page_size={str(page_size)}&sort_by={sort_by}&state={state}&force={str(force)}&force_wear={str(force_wear)}&game={str(game)}&appid={str(app_id)}'
         response_json = self.session.get(url, headers=self.buff_headers).json()
         if response_json['code'] == 'OK':
             return response_json['data']
-        else:
-            self.logger.error(response_json)
-            self.logger.error('[BuffAutoOnSale] 获取BUFF库存失败, 请检查buff_cookies.txt或稍后再试! ')
-            return {}
+        self.logger.error(response_json)
+        self.logger.error('[BuffAutoOnSale] 获取BUFF库存失败, 请检查buff_cookies.txt或稍后再试! ')
+        return {}
 
     def put_item_on_sale(self, items, price, description='', game='csgo', app_id=730):
         url = 'https://buff.163.com/api/market/sell_order/create/manual_plus'
@@ -94,22 +91,20 @@ class BuffAutoOnSale:
         response_json = self.session.post(url, json=data, headers=headers).json()
         if response_json['code'] == 'OK':
             return response_json['data']
-        else:
-            self.logger.error(response_json)
-            self.logger.error('[BuffAutoOnSale] 上架BUFF商品失败, 请检查buff_cookies.txt或稍后再试! ')
-            return {}
+        self.logger.error(response_json)
+        self.logger.error('[BuffAutoOnSale] 上架BUFF商品失败, 请检查buff_cookies.txt或稍后再试! ')
+        return {}
 
     def get_lowest_price(self, goods_id, game='csgo', app_id=730):
         if goods_id in self.lowest_price_cache:
             if self.lowest_price_cache[goods_id]['cache_time'] >= datetime.datetime.now() - datetime.timedelta(hours=1):
-                lowest_price = self.lowest_price_cache[goods_id]['lowest_price']
-                return lowest_price
+                return self.lowest_price_cache[goods_id]['lowest_price']
         self.logger.info('[BuffAutoOnSale] 获取BUFF商品最低价')
         self.logger.info('[BuffAutoOnSale] 休眠5秒, 防止请求过快被封IP')
         time.sleep(5)
         url = 'https://buff.163.com/api/market/goods/sell_order?goods_id=' + \
-              str(goods_id) + '&page_num=1&page_size=24&allow_tradable_cooldown=1&sort_by=default&game=' + game + \
-              '&appid=' + str(app_id)
+                  str(goods_id) + '&page_num=1&page_size=24&allow_tradable_cooldown=1&sort_by=default&game=' + game + \
+                  '&appid=' + str(app_id)
         response_json = self.session.get(url, headers=self.buff_headers).json()
         if response_json['code'] == 'OK':
             lowest_price = float(response_json['data']['items'][0]['price'])
@@ -161,6 +156,8 @@ class BuffAutoOnSale:
                         self.logger.info('[BuffAutoOnSale] 库存为空, 本批次上架结束!')
                         break
             except Exception as e:
-                self.logger.error('[BuffAutoOnSale] BUFF商品上架失败, 错误信息: ' + str(e), exc_info=True)
-            self.logger.info('[BuffAutoOnSale] 休眠' + str(sleep_interval) + '秒')
+                self.logger.error(
+                    f'[BuffAutoOnSale] BUFF商品上架失败, 错误信息: {str(e)}', exc_info=True
+                )
+            self.logger.info(f'[BuffAutoOnSale] 休眠{sleep_interval}秒')
             time.sleep(sleep_interval)

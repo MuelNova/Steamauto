@@ -25,20 +25,22 @@ class UUAutoAcceptOffer:
         with open(UU_TOKEN_FILE_PATH, 'r', encoding='utf-8') as f:
             try:
                 uuyoupin = uuyoupinapi.UUAccount(f.read())
-                self.logger.info('[UUAutoAcceptOffer] 悠悠有品登录完成, 用户名: ' + uuyoupin.get_user_nickname())
+                self.logger.info(
+                    f'[UUAutoAcceptOffer] 悠悠有品登录完成, 用户名: {uuyoupin.get_user_nickname()}'
+                )
             except KeyError as e:
                 self.logger.error('[UUAutoAcceptOffer] 悠悠有品登录失败! 请检查token是否正确! ')
                 self.logger.error('[UUAutoAcceptOffer] 由于登录失败，插件将自动退出')
                 sys.exit(1)
-        ignored_offer = []
-        interval = self.config['uu_auto_accept_offer']['interval']
         if uuyoupin is not None:
+            ignored_offer = []
+            interval = self.config['uu_auto_accept_offer']['interval']
             while True:
                 try:
                     self.logger.info('[UUAutoAcceptOffer] 正在检查悠悠有品待发货信息...')
                     uu_wait_deliver_list = uuyoupin.get_wait_deliver_list()
                     len_uu_wait_deliver_list = len(uu_wait_deliver_list)
-                    self.logger.info('[UUAutoAcceptOffer] ' + str(len_uu_wait_deliver_list) + '个悠悠有品待发货订单')
+                    self.logger.info(f'[UUAutoAcceptOffer] {len_uu_wait_deliver_list}个悠悠有品待发货订单')
                     if len(uu_wait_deliver_list) != 0:
                         for item in uu_wait_deliver_list:
                             self.logger.info(

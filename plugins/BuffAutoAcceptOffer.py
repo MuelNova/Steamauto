@@ -63,18 +63,18 @@ class BuffAutoAcceptOffer:
 
     def should_accept_offer(self, trade, order_info):
         sell_protection = self.config['buff_auto_accept_offer']['sell_protection']
-        protection_price_percentage = self.config['buff_auto_accept_offer']['protection_price_percentage']
-        protection_price = self.config['buff_auto_accept_offer']['protection_price']
         if sell_protection:
             self.logger.info('[BuffAutoAcceptOffer] 正在检查交易金额...')
             goods_id = str(list(trade['goods_infos'].keys())[0])
             price = float(order_info[trade['tradeofferid']]['price'])
             other_lowest_price = -1
             if goods_id in self.lowest_on_sale_price_cache and \
-                    self.lowest_on_sale_price_cache[goods_id]['cache_time'] >= \
-                    datetime.datetime.now() - datetime.timedelta(hours=1):
+                        self.lowest_on_sale_price_cache[goods_id]['cache_time'] >= \
+                        datetime.datetime.now() - datetime.timedelta(hours=1):
                 other_lowest_price = self.lowest_on_sale_price_cache[goods_id]['price']
-                self.logger.info('[BuffAutoAcceptOffer] 从缓存中获取最低价格: ' + str(other_lowest_price))
+                self.logger.info(
+                    f'[BuffAutoAcceptOffer] 从缓存中获取最低价格: {str(other_lowest_price)}'
+                )
             if other_lowest_price == -1:
                 # 只检查第一个物品的价格, 多个物品为批量购买, 理论上批量上架的价格应该是一样的
                 if trade['tradeofferid'] not in order_info:
@@ -85,8 +85,8 @@ class BuffAutoAcceptOffer:
                     else:
                         time.sleep(5)
                         sell_order_history_url = 'https://buff.163.com/api/market/sell_order' \
-                                                 '/history' \
-                                                 '?appid=' + str(trade['appid']) + '&mode=1 '
+                                                     '/history' \
+                                                     '?appid=' + str(trade['appid']) + '&mode=1 '
                         resp = requests.get(sell_order_history_url, headers=self.buff_headers)
                         resp_json = resp.json()
                         if self.development_mode:
@@ -107,8 +107,8 @@ class BuffAutoAcceptOffer:
                 else:
                     time.sleep(5)
                     shop_listing_url = 'https://buff.163.com/api/market/goods/sell_order?game=' + \
-                                       trade['game'] + '&goods_id=' + goods_id + \
-                                       '&page_num=1&sort_by=default&mode=&allow_tradable_cooldown=1'
+                                           trade['game'] + '&goods_id=' + goods_id + \
+                                           '&page_num=1&sort_by=default&mode=&allow_tradable_cooldown=1'
                     resp = requests.get(shop_listing_url, headers=self.buff_headers)
                     resp_json = resp.json()
                     if self.development_mode:
@@ -120,8 +120,10 @@ class BuffAutoAcceptOffer:
                     'price': other_lowest_price,
                     'cache_time': datetime.datetime.now()
                 }
+            protection_price_percentage = self.config['buff_auto_accept_offer']['protection_price_percentage']
+            protection_price = self.config['buff_auto_accept_offer']['protection_price']
             if price < other_lowest_price * protection_price_percentage and \
-                    other_lowest_price > protection_price:
+                        other_lowest_price > protection_price:
                 self.logger.error('[BuffAutoAcceptOffer] 交易金额过低, 跳过此交易报价')
                 if 'protection_notification' in self.config['buff_auto_accept_offer']:
                     apprise_obj = apprise.Apprise()
@@ -147,7 +149,7 @@ class BuffAutoAcceptOffer:
         if not user_name:
             self.logger.error('[BuffAutoAcceptOffer] 由于登录失败,插件自动退出... ')
             sys.exit(1)
-        self.logger.info('[BuffAutoAcceptOffer] 已经登录至BUFF 用户名: ' + user_name)
+        self.logger.info(f'[BuffAutoAcceptOffer] 已经登录至BUFF 用户名: {user_name}')
         ignored_offer = []
         order_info = {}
         interval = self.config['buff_auto_accept_offer']['interval']
@@ -207,13 +209,15 @@ class BuffAutoAcceptOffer:
                                                  game['game'] + '&appid=' + str(game['app_id']),
                                                  headers=self.buff_headers).json()
                     trade_supply = response_json['data']['items']
-                    for trade_offer in trade_supply:
-                        trade_offer_to_confirm.append(trade_offer['tradeofferid'])
+                    trade_offer_to_confirm.extend(
+                        trade_offer['tradeofferid'] for trade_offer in trade_supply
+                    )
                     self.logger.info('[BuffAutoAcceptOffer] 为了避免访问接口过于频繁，休眠5秒...')
                     time.sleep(5)
-                self.logger.info('[BuffAutoAcceptOffer] 查找到 ' + str(len(trades)) + ' 个待处理的BUFF未发货订单! ')
-                self.logger.info('[BuffAutoAcceptOffer] 查找到 ' + str(
-                    len(trade_offer_to_confirm)) + ' 个待处理的BUFF待确认供应订单! ')
+                self.logger.info(f'[BuffAutoAcceptOffer] 查找到 {len(trades)} 个待处理的BUFF未发货订单! ')
+                self.logger.info(
+                    f'[BuffAutoAcceptOffer] 查找到 {len(trade_offer_to_confirm)} 个待处理的BUFF待确认供应订单! '
+                )
                 try:
                     if len(trades) != 0:
                         i = 0
@@ -223,8 +227,7 @@ class BuffAutoAcceptOffer:
                             while offer_id in trade_offer_to_confirm:
                                 trade_offer_to_confirm.remove(offer_id)
                                 # offer_id会同时在2个接口中出现, 移除重复的offer_id
-                            self.logger.info(
-                                '[BuffAutoAcceptOffer] 正在处理第 ' + str(i) + ' 个交易报价 报价ID' + str(offer_id))
+                            self.logger.info(f'[BuffAutoAcceptOffer] 正在处理第 {i} 个交易报价 报价ID{str(offer_id)}')
                             if offer_id not in ignored_offer:
                                 try:
                                     if not self.should_accept_offer(trade, order_info):
@@ -264,12 +267,23 @@ class BuffAutoAcceptOffer:
                             if offer['response']['offer']['trade_offer_state'] == 9:
                                 self.steam_client._confirm_transaction(trade_offer_id)
                                 ignored_offer.append(trade_offer_id)
-                                self.logger.info('[BuffAutoAcceptOffer] 令牌完成! ( ' + trade_offer_id +
-                                                 ' ) 已经将此交易报价加入忽略名单!')
+                                self.logger.info(
+                                    f'[BuffAutoAcceptOffer] 令牌完成! ( {trade_offer_id} ) 已经将此交易报价加入忽略名单!'
+                                )
                             else:
                                 self.logger.info(
-                                    '[BuffAutoAcceptOffer] 令牌未完成! ( ' + trade_offer_id + ' ), 报价状态异常 ('
-                                    + str(offer['response']['offer']['trade_offer_state']) + ' )')
+                                    (
+                                        (
+                                            f'[BuffAutoAcceptOffer] 令牌未完成! ( {trade_offer_id} ), 报价状态异常 ('
+                                            + str(
+                                                offer['response']['offer'][
+                                                    'trade_offer_state'
+                                                ]
+                                            )
+                                        )
+                                        + ' )'
+                                    )
+                                )
                             if trade_offer_to_confirm.index(trade_offer_id) != len(trade_offer_to_confirm) - 1:
                                 self.logger.info('[BuffAutoAcceptOffer] 为了避免频繁访问Steam接口, 等待5秒后继续...')
                                 time.sleep(5)

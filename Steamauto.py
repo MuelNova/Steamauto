@@ -91,8 +91,9 @@ def login_to_steam():
             logger.info('登录完成! 已经自动缓存session.')
             steam_client = client
         except FileNotFoundError:
-            logger.error('未检测到' + STEAM_ACCOUNT_INFO_FILE_PATH + ', 请添加到'
-                         + STEAM_ACCOUNT_INFO_FILE_PATH + '后再进行操作! ')
+            logger.error(
+                f'未检测到{STEAM_ACCOUNT_INFO_FILE_PATH}, 请添加到{STEAM_ACCOUNT_INFO_FILE_PATH}后再进行操作! '
+            )
             pause()
             sys.exit()
         except (requests.exceptions.ConnectionError, TimeoutError):
@@ -106,7 +107,7 @@ def login_to_steam():
             pause()
             sys.exit()
         except (ValueError, ApiException):
-            logger.error('登录失败. 请检查' + STEAM_ACCOUNT_INFO_FILE_PATH + '的格式或内容是否正确!\n')
+            logger.error(f'登录失败. 请检查{STEAM_ACCOUNT_INFO_FILE_PATH}' + '的格式或内容是否正确!\n')
             pause()
             sys.exit()
         except CaptchaRequired:
@@ -119,7 +120,6 @@ def login_to_steam():
 
 def main():
     global config
-    development_mode = False
     logger.info('欢迎使用Steamauto Github仓库:https://github.com/jiajiaxd/Steamauto')
     logger.info('若您觉得Steamauto好用, 请给予Star支持, 谢谢! ')
     logger.info('正在检查更新...')
@@ -133,11 +133,12 @@ def main():
     if not os.path.exists(CONFIG_FILE_PATH):
         if not os.path.exists(EXAMPLE_CONFIG_FILE_PATH):
             logger.error(
-                '未检测到' + EXAMPLE_CONFIG_FILE_PATH + ', 请前往GitHub进行下载, 并保证文件和程序在同一目录下. ')
+                f'未检测到{EXAMPLE_CONFIG_FILE_PATH}, 请前往GitHub进行下载, 并保证文件和程序在同一目录下. '
+            )
             pause()
             sys.exit()
         shutil.copy(EXAMPLE_CONFIG_FILE_PATH, CONFIG_FILE_PATH)
-        logger.info('检测到首次运行, 已为您生成' + CONFIG_FILE_PATH + ', 请按照README提示填写配置文件! ')
+        logger.info(f'检测到首次运行, 已为您生成{CONFIG_FILE_PATH}, 请按照README提示填写配置文件! ')
         pause()
     with open(CONFIG_FILE_PATH, 'r', encoding='utf-8') as f:
         config = json.load(f)
@@ -146,9 +147,11 @@ def main():
             f.write(json.dumps({'steamid': '', 'shared_secret': '', 'identity_secret': '', 'api_key': '',
                                 'steam_username': '', 'steam_password': ''}, indent=4))
             logger.info(
-                '检测到首次运行, 已为您生成' + STEAM_ACCOUNT_INFO_FILE_PATH + ', 请按照README提示填写配置文件! ')
-    if 'development_mode' in config and config['development_mode']:
-        development_mode = True
+                f'检测到首次运行, 已为您生成{STEAM_ACCOUNT_INFO_FILE_PATH}, 请按照README提示填写配置文件! '
+            )
+    development_mode = bool(
+        'development_mode' in config and config['development_mode']
+    )
     if development_mode:
         logger.info('开发者模式已开启')
     steam_client = None
@@ -173,8 +176,8 @@ def main():
             config['steam_auto_accept_offer']['enable']:
         steam_auto_accept_offer = SteamAutoAcceptOffer(logger, steam_client, config)
         plugins_enabled.append(steam_auto_accept_offer)
-    if len(plugins_enabled) == 0:
-        logger.error('未启用任何插件, 请检查' + CONFIG_FILE_PATH + '是否正确! ')
+    if not plugins_enabled:
+        logger.error(f'未启用任何插件, 请检查{CONFIG_FILE_PATH}是否正确! ')
         pause()
         sys.exit()
     first_run = False
@@ -190,9 +193,7 @@ def main():
     if len(plugins_enabled) == 1:
         plugins_enabled[0].exec()
     else:
-        threads = []
-        for plugin in plugins_enabled:
-            threads.append(threading.Thread(target=plugin.exec))
+        threads = [threading.Thread(target=plugin.exec) for plugin in plugins_enabled]
         for thread in threads:
             thread.daemon = True
             thread.start()
